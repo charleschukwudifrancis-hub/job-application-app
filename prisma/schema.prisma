@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BoardProvider {
+  GREENHOUSE
+  LEVER
+}
+
+enum ApplicationStatus {
+  DRAFT
+  APPROVED
+  HANDED_OFF
+}
+
+model Profile {
+  id         String   @id
+  name       String   @default("")
+  email      String   @default("")
+  phone      String   @default("")
+  location   String   @default("")
+  headline   String   @default("")
+  summary    String   @default("")
+  skills     String[] @default([])
+  experience Json
+  education  Json
+  updatedAt  DateTime @updatedAt
+}
+
+model JobBoard {
+  id          String       @id @default(cuid())
+  provider    BoardProvider
+  companyName String
+  slug        String
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  @@unique([provider, slug])
+  @@index([active])
+}
+
+model Application {
+  id               String            @id @default(cuid())
+  provider         BoardProvider
+  externalId       String
+  companyName      String
+  title            String
+  location         String
+  description      String
+  applyUrl         String
+  tailoredCv       Json?
+  coverLetter      String            @default("")
+  status           ApplicationStatus @default(DRAFT)
+  approvedAt       DateTime?
+  handedOffAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([status, updatedAt])
+}
