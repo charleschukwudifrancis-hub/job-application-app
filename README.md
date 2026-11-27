@@ -60,6 +60,14 @@ The official APIs document their coverage and submission boundaries:
 - [Greenhouse Job Board API](https://docs.greenhouse.io/job-board.html) exposes public job-board listings. Programmatic application submission requires employer-side authorization.
 - [Lever Postings API](https://github.com/lever/postings-api) exposes public postings per site and does not provide universal full-text search.
 
+## Free Render test deployment
+
+The repository includes a Render Blueprint in `render.yaml`. In the Render Dashboard, choose **New > Blueprint**, connect GitHub, and select `charleschukwudifrancis-hub/job-application-app`. It creates a public web service and PostgreSQL database in Frankfurt, generates the session secret, wires the database connection, and applies migrations when the service starts. After deployment, open the generated `onrender.com` URL and create an account.
+
+This free setup is for testing only: the web service spins down after 15 minutes without traffic, and the PostgreSQL database expires 30 days after creation. Data in that database will be deleted when it expires. Do not use it for real CVs or other personal data; back up or move the database to a paid persistent plan before then. The first page load after the service sleeps can take about a minute.
+
+Email verification, password-reset email, and signup rate limiting are not configured. Add `AI_API_KEY` and `AI_MODEL` in the Render Dashboard if you want to enable AI tailoring; these values are optional and must not be committed to GitHub.
+
 ## Production deployment
 
 Deploy the Next.js app and PostgreSQL database to services you control. Set `DATABASE_URL` and `APP_SESSION_SECRET` in the deployment's secret manager; set `AI_API_KEY`, `AI_MODEL`, and optionally `AI_BASE_URL` only if AI tailoring is desired. Run `npm run db:deploy` as the release migration step. Use HTTPS in production; the session cookie is marked `Secure` there. Account registration is open to anyone who can reach the deployed site; configure email verification, password recovery, and signup rate limiting before relying on it for a public production service.
