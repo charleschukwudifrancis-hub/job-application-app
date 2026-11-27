@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { authenticationRequiredResponse, getAuthenticatedUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createApplicationSchema } from "@/lib/schemas";
 import { isSafeApplyUrl } from "@/lib/job-boards";
@@ -8,11 +9,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const applications = await prisma.application.findMany({ orderBy: { updatedAt: "desc" } });
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return authenticationRequiredResponse();
+  const applications = await prisma.application.findMany({ where: { ownerId: userId }, orderBy: { updatedAt: "desc" } });
   return NextResponse.json({ applications });
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return authenticationRequiredResponse();
   let body: unknown;
   try {
     body = await request.json();
@@ -25,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "The employer application link is not a trusted job-board URL." }, { status: 400 });
   }
 
-  const profile = await prisma.profile.findUnique({ where: { id: "primary" } });
+  const profile = await prisma.profile.findUnique({ where: { ownerId: userId } });
   if (!profile || !profile.name || !profile.email) {
     return NextResponse.json({ error: "Add your name and email to your CV before drafting an application." }, { status: 409 });
   }
@@ -33,6 +38,7 @@ export async function POST(request: NextRequest) {
   const application = await prisma.application.create({
     data: {
       ...parsed.data,
+      ownerId: userId,
       tailoredCv: {
         headline: profile.headline,
         summary: profile.summary,

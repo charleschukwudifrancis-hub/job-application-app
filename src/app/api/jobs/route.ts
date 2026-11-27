@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authenticationRequiredResponse, getAuthenticatedUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fetchBoardJobs, searchListings } from "@/lib/job-boards";
 
@@ -6,9 +7,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return authenticationRequiredResponse();
   const query = request.nextUrl.searchParams.get("q")?.slice(0, 120) ?? "";
   const location = request.nextUrl.searchParams.get("location")?.slice(0, 120) ?? "";
-  const boards = await prisma.jobBoard.findMany({ where: { active: true } });
+  const boards = await prisma.jobBoard.findMany({ where: { active: true, ownerId: userId } });
   if (!boards.length) return NextResponse.json({ jobs: [], errors: [], configuredBoards: 0 });
 
   const results = await Promise.allSettled(

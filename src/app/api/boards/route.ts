@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { authenticationRequiredResponse, getAuthenticatedUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { boardSchema } from "@/lib/schemas";
 import { fetchBoardJobs } from "@/lib/job-boards";
@@ -8,11 +9,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const boards = await prisma.jobBoard.findMany({ orderBy: { companyName: "asc" } });
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return authenticationRequiredResponse();
+  const boards = await prisma.jobBoard.findMany({ where: { ownerId: userId }, orderBy: { companyName: "asc" } });
   return NextResponse.json({ boards });
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return authenticationRequiredResponse();
   let body: unknown;
   try {
     body = await request.json();
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const board = await prisma.jobBoard.create({ data: parsed.data });
+    const board = await prisma.jobBoard.create({ data: { ...parsed.data, ownerId: userId } });
     return NextResponse.json({ board }, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

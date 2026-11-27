@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { authenticationRequiredResponse, getAuthenticatedUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { profileSchema } from "@/lib/schemas";
 import type { CvProfile, ExperienceItem } from "@/lib/types";
@@ -19,13 +20,15 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return authenticationRequiredResponse();
   const { id } = await params;
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "Add AI_API_KEY to the server environment to enable tailoring." }, { status: 503 });
 
   const [application, profileRecord] = await Promise.all([
-    prisma.application.findUnique({ where: { id } }),
-    prisma.profile.findUnique({ where: { id: "primary" } }),
+    prisma.application.findFirst({ where: { id, ownerId: userId } }),
+    prisma.profile.findUnique({ where: { ownerId: userId } }),
   ]);
   if (!application) return NextResponse.json({ error: "Application draft was not found." }, { status: 404 });
   if (application.status !== "DRAFT") {
@@ -149,7 +152,7 @@ export async function POST(
   };
 
   const updated = await prisma.application.update({
-    where: { id },
+    where: { id, ownerId: userId },
     data: {
       tailoredCv: tailoredCv as Prisma.InputJsonValue,
       coverLetter: parsed.data.coverLetter,

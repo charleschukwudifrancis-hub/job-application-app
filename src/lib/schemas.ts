@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+const accountEmailSchema = z.string().trim().max(254).email("Enter a valid email address.").transform((email) => email.toLowerCase());
+
+export const registerAccountSchema = z.object({
+  name: z.string().trim().min(1, "Enter your name.").max(120),
+  email: accountEmailSchema,
+  password: z.string().min(12, "Use a password with at least 12 characters.").max(128),
+});
+
+export const loginAccountSchema = z.object({
+  email: accountEmailSchema,
+  password: z.string().min(1).max(128),
+});
+
 const experienceItemSchema = z.object({
   company: z.string().trim().max(120),
   role: z.string().trim().max(120),
@@ -17,7 +30,7 @@ const educationItemSchema = z.object({
 
 export const profileSchema = z.object({
   name: z.string().trim().max(120),
-  email: z.string().trim().max(254),
+  email: z.string().trim().max(254).refine((value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), "Enter a valid email address."),
   phone: z.string().trim().max(60),
   location: z.string().trim().max(160),
   headline: z.string().trim().max(180),
